@@ -17,6 +17,12 @@
   "dependencies": {
     "axios": "^0.20.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/max-zaytsev/appcenter-build-monitor.git"
+  },
+  "homepage": "https://github.com/max-zaytsev/appcenter-build-monitor#readme",
+  "files": ["dist/**/*"],
   "devDependencies": {
     "@types/node": "^14.11.2",
     "nodemon": "^2.0.4",
