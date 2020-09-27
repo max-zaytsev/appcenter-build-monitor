@@ -27,7 +27,7 @@ master build 36 failed in 64.34 sec. Link to build logs https://appcenter.ms/use
 branch3 build 37 failed in 49.455 sec. Link to build logs https://appcenter.ms/users/username-microsoft.com/apps/appname/build/branches/branch3/builds/37
 ```
 
-### Start builds and update monitoring with a time a specific time interval
+### Start builds and update monitoring with a specific time interval
 
 ```js
 const abWithTimeInterval = new AppCenterBuildMonitor(
