@@ -1,9 +1,4 @@
-import axios, {
-  AxiosError,
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-} from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
 export interface Build {
   id: number;
@@ -32,7 +27,6 @@ export interface BranchConfiguration {
 
 export class AppCenterBuildMonitor {
   private readonly apiClient: AxiosInstance;
-
   constructor(
     private readonly appName: string,
     private readonly ownerName: string,
@@ -49,47 +43,10 @@ export class AppCenterBuildMonitor {
     this.apiClient = axios.create(config);
   }
 
-  //send request to AppCenter Api using axios
-  public getBuildById = async (buildId: number): Promise<Build> => {
-    const response: AxiosResponse = await this.apiClient.get(
-      `/builds/${buildId}`
-    );
-    const build: Build = response.data;
-    return build;
-  };
-
-  public getBranches = async (): Promise<BranchConfiguration[]> => {
-    const response: AxiosResponse = await this.apiClient.get(`/branches`);
-    const branches: BranchConfiguration[] = response.data;
-    return branches || [];
-  };
-
-  public startBuild = async (
-    branchName: string,
-    sourceVersion: string
-  ): Promise<Build> => {
-    const params = { sourceVersion: sourceVersion };
-    const response: AxiosResponse = await this.apiClient.post(
-      `/branches/${branchName}/builds`,
-      params
-    );
-    const build: Build = response.data;
-    return build;
-  };
-
   public startBuildsOnAllBranches = async (): Promise<void> => {
-
     //get list of branches
     const branches = await this.getBranches();
     //console.log(branches);
-
-    const buildRequests = branches.map((branch) =>
-      this.getBuildById(branch.lastBuild.id)
-    );
-
-    //get lastBuilds
-    const lastBuilds = await Promise.all(buildRequests);
-    console.log(lastBuilds);
 
     //Start builds
     const startBuildRequests = branches.map((branch) =>
@@ -100,12 +57,7 @@ export class AppCenterBuildMonitor {
     this.updateStatus(startedBuilds);
   };
 
-  public showReport = (build: Build) => {
-    console.log(
-      `${build.sourceBranch} ${build.id} ${build.status} https://api.appcenter.ms/v0.1/apps/${this.ownerName}/${this.appName}/builds/${build.id}/logs`
-    );
-  };
-  public updateStatus = async (startedBuilds: Build[]) => {
+  private updateStatus = async (startedBuilds: Build[]) => {
     startedBuilds.forEach((build: Build) => {
       if (build.status === "completed") this.showReport(build);
     });
@@ -125,6 +77,43 @@ export class AppCenterBuildMonitor {
     //Get updated status
     const builds = await Promise.all(buildRequests);
 
-    setTimeout(this.updateStatus, 60000, builds);
+    setTimeout(this.updateStatus, 10000, builds);
+  };
+
+  private showReport = (build: Build) => {
+    const logsLink = `https://appcenter.ms/users/${this.ownerName}/apps/${this.appName}/build/branches/${build.sourceBranch}/builds/${build.id}`;
+    const buildDuration =
+      (Date.parse(build.finishTime) - Date.parse(build.startTime)) / 1000;
+    console.log(
+      `${build.sourceBranch} build ${build.id} ${build.result} in ${buildDuration} sec. Link to build logs ${logsLink}`
+    );
+  };
+
+  //send request to AppCenter Api using axios
+  private getBuildById = async (buildId: number): Promise<Build> => {
+    const response: AxiosResponse = await this.apiClient.get(
+      `/builds/${buildId}`
+    );
+    const build: Build = response.data;
+    return build;
+  };
+
+  private getBranches = async (): Promise<BranchConfiguration[]> => {
+    const response: AxiosResponse = await this.apiClient.get(`/branches`);
+    const branches: BranchConfiguration[] = response.data;
+    return branches || [];
+  };
+
+  private startBuild = async (
+    branchName: string,
+    sourceVersion: string
+  ): Promise<Build> => {
+    const params = { sourceVersion: sourceVersion };
+    const response: AxiosResponse = await this.apiClient.post(
+      `/branches/${branchName}/builds`,
+      params
+    );
+    const build: Build = response.data;
+    return build;
   };
 }

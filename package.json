@@ -2,8 +2,8 @@
   "name": "appcenter-build-monitor",
   "version": "1.0.0",
   "description": "Receives a list of branches for the app to build and monitor them",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
