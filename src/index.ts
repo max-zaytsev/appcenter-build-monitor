@@ -27,11 +27,18 @@ export interface BranchConfiguration {
 
 export class AppCenterBuildMonitor {
   private readonly apiClient: AxiosInstance;
+  private MaxUpdateStatusInterval = 10 * 60 * 1000;
   constructor(
     private readonly appName: string,
     private readonly ownerName: string,
-    token: string
+    token: string,
+    private readonly updateStatusInterval: number = 10 * 1000
   ) {
+    if ( this.updateStatusInterval <= 0 || this.updateStatusInterval > this.MaxUpdateStatusInterval) {
+      throw Error(
+        `Invalid argument: updateStatusInterval. Value should be between 0 and ${this.MaxUpdateStatusInterval}`
+      );
+    }
     const config: AxiosRequestConfig = {
       baseURL: `https://api.appcenter.ms/v0.1/apps/${this.ownerName}/${this.appName}`,
       responseType: "json",
@@ -47,9 +54,13 @@ export class AppCenterBuildMonitor {
     //get list of branches
     const branches = await this.getBranches();
     //console.log(branches);
+    const configureBranches = branches.filter(
+      (branch) => branch.configured === true
+    );
+    console.log(configureBranches);
 
     //Start builds
-    const startBuildRequests = branches.map((branch) =>
+    const startBuildRequests = configureBranches.map((branch) =>
       this.startBuild(branch.branch.name, branch.branch.commit.sha)
     );
     const startedBuilds = await Promise.all(startBuildRequests);
@@ -77,7 +88,7 @@ export class AppCenterBuildMonitor {
     //Get updated status
     const builds = await Promise.all(buildRequests);
 
-    setTimeout(this.updateStatus, 10000, builds);
+    setTimeout(this.updateStatus, this.updateStatusInterval, builds);
   };
 
   private showReport = (build: Build) => {
