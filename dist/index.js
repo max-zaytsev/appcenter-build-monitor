@@ -42,78 +42,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppCenterBuildMonitor = void 0;
 var axios_1 = __importDefault(require("axios"));
 var AppCenterBuildMonitor = /** @class */ (function () {
-    function AppCenterBuildMonitor(appName, ownerName, token) {
+    function AppCenterBuildMonitor(appName, ownerName, token, updateStatusInterval) {
         var _this = this;
+        if (updateStatusInterval === void 0) { updateStatusInterval = 10 * 1000; }
         this.appName = appName;
         this.ownerName = ownerName;
-        //send request to AppCenter Api using axios
-        this.getBuildById = function (buildId) { return __awaiter(_this, void 0, void 0, function () {
-            var response, build;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.apiClient.get("/builds/" + buildId)];
-                    case 1:
-                        response = _a.sent();
-                        build = response.data;
-                        return [2 /*return*/, build];
-                }
-            });
-        }); };
-        this.getBranches = function () { return __awaiter(_this, void 0, void 0, function () {
-            var response, branches;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.apiClient.get("/branches")];
-                    case 1:
-                        response = _a.sent();
-                        branches = response.data;
-                        return [2 /*return*/, branches || []];
-                }
-            });
-        }); };
-        this.startBuild = function (branchName, sourceVersion) { return __awaiter(_this, void 0, void 0, function () {
-            var params, response, build;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        params = { sourceVersion: sourceVersion };
-                        return [4 /*yield*/, this.apiClient.post("/branches/" + branchName + "/builds", params)];
-                    case 1:
-                        response = _a.sent();
-                        build = response.data;
-                        return [2 /*return*/, build];
-                }
-            });
-        }); };
-        this.startBuildsOnAllBranches = function () { return __awaiter(_this, void 0, void 0, function () {
-            var branches, buildRequests, lastBuilds, startBuildRequests, startedBuilds;
+        this.updateStatusInterval = updateStatusInterval;
+        this.MaxUpdateStatusInterval = 10 * 60 * 1000;
+        this.startBuildsOnConfiguredBranches = function () { return __awaiter(_this, void 0, void 0, function () {
+            var branches, configureBranches, startBuildRequests, startedBuilds;
             var _this = this;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.getBranches()];
                     case 1:
                         branches = _a.sent();
-                        buildRequests = branches.map(function (branch) {
-                            return _this.getBuildById(branch.lastBuild.id);
-                        });
-                        return [4 /*yield*/, Promise.all(buildRequests)];
-                    case 2:
-                        lastBuilds = _a.sent();
-                        console.log(lastBuilds);
-                        startBuildRequests = branches.map(function (branch) {
+                        if (!branches.length) {
+                            throw Error("There are no branches in " + this.appName + " application");
+                        }
+                        configureBranches = branches.filter(function (branch) { return branch.configured === true; });
+                        if (!configureBranches.length) {
+                            throw Error("There are no configured branches in " + this.appName + " application");
+                        }
+                        startBuildRequests = configureBranches.map(function (branch) {
                             return _this.startBuild(branch.branch.name, branch.branch.commit.sha);
                         });
                         return [4 /*yield*/, Promise.all(startBuildRequests)];
-                    case 3:
+                    case 2:
                         startedBuilds = _a.sent();
+                        startedBuilds.forEach(function (build) {
+                            console.log("Build " + build.id + " was started for " + build.sourceBranch);
+                        });
+                        //Monitor started builds
                         this.updateStatus(startedBuilds);
                         return [2 /*return*/];
                 }
             });
         }); };
-        this.showReport = function (build) {
-            console.log(build.sourceBranch + " " + build.id + " " + build.status + " https://api.appcenter.ms/v0.1/apps/" + _this.ownerName + "/" + _this.appName + "/builds/" + build.id + "/logs");
-        };
+        //Updates build statuses for started builds with time interval
         this.updateStatus = function (startedBuilds) { return __awaiter(_this, void 0, void 0, function () {
             var notCompletedJobs, buildRequests, builds;
             var _this = this;
@@ -134,11 +100,61 @@ var AppCenterBuildMonitor = /** @class */ (function () {
                         return [4 /*yield*/, Promise.all(buildRequests)];
                     case 1:
                         builds = _a.sent();
-                        setTimeout(this.updateStatus, 60000, builds);
+                        setTimeout(this.updateStatus, this.updateStatusInterval, builds);
                         return [2 /*return*/];
                 }
             });
         }); };
+        //print a status report for the given build
+        this.showReport = function (build) {
+            var logsLink = "https://appcenter.ms/users/" + _this.ownerName + "/apps/" + _this.appName + "/build/branches/" + build.sourceBranch + "/builds/" + build.id;
+            var buildDuration = (Date.parse(build.finishTime) - Date.parse(build.startTime)) / 1000;
+            console.log(build.sourceBranch + " build " + build.id + " " + build.result + " in " + buildDuration + " sec. Link to build logs " + logsLink);
+        };
+        //send request to AppCenter Api to get build details by its id
+        this.getBuildById = function (buildId) { return __awaiter(_this, void 0, void 0, function () {
+            var response, build;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.apiClient.get("/builds/" + buildId)];
+                    case 1:
+                        response = _a.sent();
+                        build = response.data;
+                        return [2 /*return*/, build];
+                }
+            });
+        }); };
+        //send request to AppCenter Api to get list of branches
+        this.getBranches = function () { return __awaiter(_this, void 0, void 0, function () {
+            var response, branches;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.apiClient.get("/branches")];
+                    case 1:
+                        response = _a.sent();
+                        branches = response.data;
+                        return [2 /*return*/, branches];
+                }
+            });
+        }); };
+        //send post request to AppCenter Api in order to start build against the branch
+        this.startBuild = function (branchName, sourceVersion) { return __awaiter(_this, void 0, void 0, function () {
+            var params, response, build;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        params = { sourceVersion: sourceVersion };
+                        return [4 /*yield*/, this.apiClient.post("/branches/" + branchName + "/builds", params)];
+                    case 1:
+                        response = _a.sent();
+                        build = response.data;
+                        return [2 /*return*/, build];
+                }
+            });
+        }); };
+        if (this.updateStatusInterval <= 0 || this.updateStatusInterval > this.MaxUpdateStatusInterval) {
+            throw Error("Invalid argument: updateStatusInterval. Value should be between 0 and " + this.MaxUpdateStatusInterval);
+        }
         var config = {
             baseURL: "https://api.appcenter.ms/v0.1/apps/" + this.ownerName + "/" + this.appName,
             responseType: "json",
@@ -152,5 +168,3 @@ var AppCenterBuildMonitor = /** @class */ (function () {
     return AppCenterBuildMonitor;
 }());
 exports.AppCenterBuildMonitor = AppCenterBuildMonitor;
-var ab = new AppCenterBuildMonitor("TmpTst", "v-mazayt-microsoft.com", "4ea11d250087111b3d3d8cbf864caba1761fd88a");
-ab.startBuildsOnAllBranches();

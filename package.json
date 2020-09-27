@@ -1,6 +1,6 @@
 {
   "name": "appcenter-build-monitoring",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Receives a list of branches for the app to build and monitor them",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",

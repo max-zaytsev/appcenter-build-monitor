@@ -22,12 +22,14 @@ export interface BranchConfiguration {
 export declare class AppCenterBuildMonitor {
     private readonly appName;
     private readonly ownerName;
+    private readonly updateStatusInterval;
     private readonly apiClient;
-    constructor(appName: string, ownerName: string, token: string);
-    getBuildById: (buildId: number) => Promise<Build>;
-    getBranches: () => Promise<BranchConfiguration[]>;
-    startBuild: (branchName: string, sourceVersion: string) => Promise<Build>;
-    startBuildsOnAllBranches: () => Promise<void>;
-    showReport: (build: Build) => void;
-    updateStatus: (startedBuilds: Build[]) => Promise<void>;
+    private MaxUpdateStatusInterval;
+    constructor(appName: string, ownerName: string, token: string, updateStatusInterval?: number);
+    startBuildsOnConfiguredBranches: () => Promise<void>;
+    private updateStatus;
+    private showReport;
+    private getBuildById;
+    private getBranches;
+    private startBuild;
 }
